@@ -1,0 +1,18 @@
+got executable file (windows host), activated exe in cmd:
+>411c114b12e0342ee45e5efe9778154c.exe
+                 _   _     _ _
+     /\         | | (_)   | | |
+    /  \   _ __ | |_ _  __| | |__   __ _
+   / /\ \ | '_ \| __| |/ _` | '_ \ / _` |
+  / ____ \| | | | |_| | (_| | |_) | (_| |
+ /_/    \_\_| |_|\__|_|\__,_|_.__/ \__, |
+                                    __/ |
+                                   |___/
+
+       ... Debug me if you can ...
+[*] Level 1... Your flag is at 0x0000017B627A56E0
+[*] Level 2... Your flag is at 0x0000017B627A56E0
+[*] Level 3... Your flag is at 0x0000017B627A56E0
+[*] Level 4... Your flag is at 0x0000017B627A56E0
+[*] Level 5... Your flag is at 0x0000017B627A56E0
+with ida i saw that level1 cannot be performed with a debugger attached
