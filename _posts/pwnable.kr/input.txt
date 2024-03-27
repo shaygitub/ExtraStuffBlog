@@ -1,0 +1,193 @@
+ALMOST FULLY GUIDED EXERCISE ON PARTS LIKE ln, execve, pipes mostly, not on stage5, not on stage 1, not on stage 4
+stage1:
+argc = 100
+argv[65] = "\x00"
+argv[66] = "\x20\x0a\x0d"
+i used a script that fills a char* [] with 101 strings (100 arguments + required space at the end, for some reason does not work without it)
+and puts these strings in the indexes below, and calls execve that executes a file with these arguments
+
+stage2:
+cannot directly write from program to stdin(0) / stderr(2), so i used local pipes to direct the needed input
+1) created the pipe objects that will be used to write into 0,2
+2) used fork() to create a child process
+2.a) pid == 0 (part that child process runs) - write to assigned output part of pipe
+2.b) pid != 0 (part that parent process runs) - connect between the output parts of both assigned pipes in
+child process to the global relevant "sides" (stdin,sterr) so the output that child process writes will go
+
+stage3:
+had to set environment variable value for a specific variable, did that with setenv(varname, value, 1);
+every process has a parent process, and the environment variables of that process are:
+1. LOCAL (only for that instance of the process)
+2. PASSED TO THE PROCESS BY THE FATHER PROCESS (usually the existing ones in the father process + some more if needed)
+so, to implement this idea:
+1) i already created the variable as the environment variables of my specific script file (not even that of the command shell0
+2) get the list of environment variables to pass to input (do that with extern char** environ, environ = variable with list)
+3) pass it to input - as i said in (2.), passed by father (third parameter of execve)
+
+stage4:
+reverse script-
+1) opens file named "\x0a" with read privileges - create file named "\x0a" with mode "w" to create + writes
+2) reads 4 bytes and compares to \x00\x00\x00\x00 - write \x00\x00\x00\x00 into the file
+# CLOSE THE DAMN FILE HANDLE AFTER - CHILD PROCESS CAN NOT OPEN FILE IF NOT
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <errno.h>
+
+int main(){
+    // Stage1 - CL arguments + Stage3 - environment variable (passing values later):
+    if(putenv("\xde\xad\xbe\xef=\xca\xfe\xba\xbe") == 0){
+        printf("sucenv\n");
+    }
+    else{
+        printf("enverr: %d\n", errno);
+    }
+    setenv("\xde\xad\xbe\xef", "\xca\xfe\xba\xbe", 1);
+    extern char** environ;  // will be passed to the input program
+    char* clargs[101] = {};
+    for (int i=0; i<101; i++) {
+        clargs[i] = "\x56"; // fill up 100 arguments with a filler char
+    }
+
+    clargs[65] = "\x00";
+    clargs[66] = "\x20\x0a\x0d";
+    clargs[100] = NULL;
+
+    // Stage2 - stdio:
+    const char* First = "\x00\x0a\x00\xff";
+    const char* Second = "\x00\x0a\x02\xff";
+    int pipestdin[2];
+    int pipestderr[2];
+    pid_t shellpid;
+    pipe(pipestdin);
+    pipe(pipestderr); 
+    shellpid = fork();
+    if (shellpid == -1){
+        exit(1);
+    }
+    
+    if (shellpid == 0){
+        close(pipestdin[0]);
+        close(pipestderr[0]);
+        write(pipestdin[1], First, 4);
+        write(pipestderr[1], Second, 4);
+    }
+    else{
+        close(pipestdin[1]);
+        close(pipestderr[1]);
+        dup2(pipestdin[0], 0);
+        dup2(pipestderr[0], 2);
+        close(pipestdin[0]);
+        close(pipestderr[0]);
+        FILE* FourFile = fopen("\x0a", "w");
+        fwrite("\x00\x00\x00\x00", 4, 1, FourFile);
+        fclose(FourFile);
+        execve("/home/input2/input", clargs, environ);
+    }
+}
+
+stage5:
+in this stage i basically used the input.c script to do the opposite to connect from another script on my local kali machine,
+i did it with pinging the pwnable.kr to get the IPV4 address, connect, and send the required buffer
+also: current user does not have permission to view flag file, so i created a link to my file (ln -sf /home/input2/flag flag)
+connecting client script:
+#include <stdio.h>  
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <errno.h>
+
+int main(){
+    int consock;
+    struct sockaddr_in srvaddr;
+    int c = sizeof(struct sockaddr_in);
+    consock = socket(AF_INET, SOCK_STREAM, 0);
+    if(consock == -1){
+            printf("socket error, tell admin MEMEMEME\n");
+            return 0;
+    }
+    srvaddr.sin_family = AF_INET;
+    inet_pton(AF_INET, "128.61.240.205", &(srvaddr.sin_addr));
+    srvaddr.sin_port = htons(45678);
+    int conres = connect(consock, (struct sockaddr*)&srvaddr, sizeof(struct sockaddr));
+    if(conres < 0){
+        printf("connect error, tell admin MEMEMEMMEME\n");
+        return 0;
+    } 
+    
+    const char* sendbuf = "\xde\xad\xbe\xef";
+    size_t sendsize = send(consock, sendbuf, 4, 0);
+    printf("Sent %zu bytes by send!\n", sendsize);
+    return 1;
+}
+pwn script that i used and put in special folder in /tmp:
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <errno.h>
+
+int main(){
+    // Stage1 - CL arguments + Stage3 - environment variable (passing values later):
+    if(putenv("\xde\xad\xbe\xef=\xca\xfe\xba\xbe") == 0){
+        printf("sucenv\n");
+    }
+    else{
+        printf("enverr: %d\n", errno);
+    }
+    setenv("\xde\xad\xbe\xef", "\xca\xfe\xba\xbe", 1);
+    extern char** environ;  // will be passed to the input program
+    char* clargs[101] = {};
+    for (int i=0; i<101; i++) {
+        clargs[i] = "\x56"; // fill up 100 arguments with a filler char
+    }
+
+    clargs[65] = "\x00";
+    clargs[66] = "\x20\x0a\x0d";
+    clargs[67] = "45678";
+    printf("%hu\n", htons(45678));
+    clargs[100] = NULL;
+
+    // Stage2 - stdio:
+    const char* First = "\x00\x0a\x00\xff";
+    const char* Second = "\x00\x0a\x02\xff";
+    int pipestdin[2];
+    int pipestderr[2];
+    pid_t shellpid;
+    pipe(pipestdin);
+    pipe(pipestderr); 
+    shellpid = fork();
+    if (shellpid == -1){
+        exit(1);
+    }
+    
+    if (shellpid == 0){
+        close(pipestdin[0]);
+        close(pipestderr[0]);
+        write(pipestdin[1], First, 4);
+        write(pipestderr[1], Second, 4);
+    }
+    else{
+        close(pipestdin[1]);
+        close(pipestderr[1]);
+        dup2(pipestdin[0], 0);
+        dup2(pipestderr[0], 2);
+        close(pipestdin[0]);
+        close(pipestderr[0]);
+        FILE* FourFile = fopen("\x0a", "w");
+        fwrite("\x00\x00\x00\x00", 4, 1, FourFile);
+        fclose(FourFile);
+        execve("/home/input2/input", clargs, environ);
+    }
+}
+flag: "Mommy! I learned how to pass various input in Linux :)"

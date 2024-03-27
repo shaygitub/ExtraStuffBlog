@@ -1,0 +1,3 @@
+The Flag\.password = the password is "Im The Flag"
+The Flag.pdf asks for password, provide "Im The Flag"
+flag: "ABCTF{T3Rm1n4l_is_C00l}"

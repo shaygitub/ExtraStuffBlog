@@ -1,0 +1,14 @@
+ONLY RESEARCH IN GOOGLE AND WRITEUP FOR MEANING OF MAJOR INSTRUCTIONS - I DONT KNOW MUCH ARM
+
+needed information-
+r3: register that holds return value from function like rax in x86
+lr: holds the value of the address that the current function will return to (return address, will jmp to it in ret)
+pc: holds the value of the address of the next instruction + 4
+
+1. look at c source code, basically just need to figure out the value of r3 in the end of each key function
+2. figure out the last value of r3 in each of the 3 functions and add the values:
+2.a. last value of r3 is pc, which in this case is 0x00008ce0+4
+2.b. last value of r3 is pc + 4, which in this case is 0x00008d06 + 4 + 4
+2.c. last value of r3 is lr, which in this case (address of instruction after calling key3) is 0x00008d80
+2.FINAL. sum of these values is 108,400 (0x0001 A770)
+flag: "My daddy has a lot of ARMv5te muscle!" 

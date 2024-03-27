@@ -1,0 +1,4 @@
+script takes 6 bytes from me and generates 6 bytes from 1-45
+it compares each randomized byte to ALL of my provided bytes
+i provided 6 34s (") to raise the chances for only one match that will set the counter to 6 and give me the flag
+flag: "sorry mom... I FORGOT to check duplicate numbers... :("

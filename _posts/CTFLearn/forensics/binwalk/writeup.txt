@@ -1,0 +1,5 @@
+2 png pics in one (offset 0-0x25795, offset 0x25795-end), used aperisolve
+using HxD copied second image (second.png) to a seperate file, deleted it from og and saved it
+as first.png (first pic)
+first pic is the original and the second includes the flag:
+flag: "ABCTF{b1nw4lk_is_us3ful}"

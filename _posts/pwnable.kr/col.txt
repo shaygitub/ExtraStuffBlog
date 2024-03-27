@@ -1,0 +1,14 @@
+need that from the 20 letter string, 5 groups of 4 bytes together will ammount to 0x21DD09EC
+4 groups straight from memory - can input straight memory hexadecimal values
+0x21DD09EC / 5 = 0x6C5CEC8  + rem
+0x6C5CEC8  - 0x6C5CEC8*4 = rem = 0x06C5CECC
+little endian: each full = 0xC8CEC506, rem = 0xCCCEC506
+memory needs to be: 0xC8CEC506 0xC8CEC506 0xC8CEC506 0xC8CEC506 0xCCCEC506 (each one is 4 bytes)
+since its not possible to specify each value by ascii characters, i will use python hexadecimal strings to give input to col.
+in python: \xhexvalueof1byte\xhexof2ndbyte...
+so: \xC8\xCE\xC5\x06\xC8\xCE\xC5\x06\xC8\xCE\xC5\x06\xC8\xCE\xC5\x06\xCC\xCE\xC5\x06
+need to output to the command line for argument: python -c 'print "bytestring"'
+currently it will see everything written as one argument "python -c ...", to specify that only output is the parameter: add wrapping
+around everything (",' are already used, i used `)
+command: ./col `python -c 'print "\xC8\xCE\xC5\x06\xC8\xCE\xC5\x06\xC8\xCE\xC5\x06\xC8\xCE\xC5\x06\xCC\xCE\xC5\x06"'`
+flag: "daddy! I just managed to create a hash collision :)"

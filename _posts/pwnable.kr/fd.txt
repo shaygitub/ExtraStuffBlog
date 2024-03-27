@@ -1,0 +1,6 @@
+file descriptor = handle-like value in UNIX to handle IO of a file
+script reads from a file descriptor into a buffer, and compares it to a "LETMEWIN\n"
+0-stdin,1-stdout,2-stderr. using fd = 0 will let me read from stdin a wanted value so i want to read from stdin and then it would let
+me input the value to be read in the command line.
+./fd 4660 works, script reduces input by 4660, needs to be zero
+flag: mommy! I think I know what a file descriptor is!!

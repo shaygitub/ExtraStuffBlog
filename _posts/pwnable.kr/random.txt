@@ -1,0 +1,8 @@
+ALONE TOTALLY
+1. set breakpoint in gdb after rand when value is in eax
+2. info registers eax to show the randomised value
+3. key ^ randomvalue = 0xdeadbeef, so 0xdeadbeef ^ randomvalue = key, used this logic to calculate what to 
+write into key, in my case: randomvalue = 1804289383, key should be = 0xb526fb88 (3039230856)
+4. do next to keep going until input line and input decimal value into key
+5. MAKE SURE TO RUN IN /TMP AFTER RECOMPILING - ACCESS DENIED TO FLAG IF NOT
+flag: "Mommy, I thought libc random is unpredictable..."

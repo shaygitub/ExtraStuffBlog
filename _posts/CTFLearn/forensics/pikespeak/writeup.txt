@@ -1,0 +1,28 @@
+exiftool comment: Comment	CTFLEARN{PikesPeak}, not flag
+strings:
+CTFLEARN{PikesPeak}
+CTFLearn{Colorado}
+%ctflearn{MountainMountainMountain}
+#cTfLeArN{CTFMountainCTFmOUNTAIN}
+CTF{AsPEN.Vail}
+CTFlearn{Gandalf}
+ctflearning{AUCKLAND}
+ctfLEARN{MtDoom}
+6ctflearninglearning{Mordor.TongariroAlpineCrossing}
++CTFLEARN{MountGedePangrangoNationalPark}
+$ctflearncTfLeARN{MountKosciuszko}
+
+right format: CTFlearn{...}:
+CTFlearn{PikesPeak} - incorrect
+CTFlearn{Colorado} - incorrect
+CTFlearn{MountainMountainMountain} - incorrect
+CTFlearn{CTFMountainCTFmOUNTAIN} - incorrect
+CTFlearn{AsPEN.Vail} - incorrect
+CTFlearn{Gandalf} - CORRECT FLAG
+ctflearning{AUCKLAND}
+ctfLEARN{MtDoom}
+6ctflearninglearning{Mordor.TongariroAlpineCrossing}
++CTFLEARN{MountGedePangrangoNationalPark}
+$ctflearncTfLeARN{MountKosciuszko}
+
+flag: "CTFlearn{Gandalf}"

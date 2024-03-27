@@ -1,0 +1,3 @@
+found string that starts with CTFlearn in file: "CTFlearnHº{fl4ggyfH‰EÐH‰UØHÇEàl4g}"
+flag: "CTFlearnº{fl4ggyfH‰Ð‰ØÇàl4g}" 
+actual flag (reduced to regular printable chars): "CTFlearn{fl4ggyfl4g}"

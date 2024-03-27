@@ -1,0 +1,14 @@
+tried to inspect file with running and file filename and disassembling with gdb but none helped
+with some help, i was shown the strings filename function - find printable strings inside of a file
+after a while, i also noticed that the file was packed, and figured that the clue i got about the function strings meant that somehow
+i could use it to help unpack the file and figure out what the flag is (the mission is only reversing, so i cannot achieve the flag without it)
+my initial logical thought was that most important packing information i might find in plaintext is the packing technique/algorithm
+because without it you could never unpack the file, so i seached for packing/unpacking with grep "pack" and 'unpack' in the output of
+the strings command, and i found the next line:
+$Info: This file is packed with the UPX executable packer http://upx.sf.net $
+wrote upx in the cmd bcz many have command line tools for packing/unpacking, found it, and ran upx -d flag to unpack the file
+after unpacking it i went straight to gdb, used break on the malloc function thats called,run in gdb context, a few steps to get back to
+main function and then i saw the comment and knew the flag resides in that address
+first tried x 0x6c2070 but it did not showed the flag
+i figured that its because 0x6c2070 is an address (pointer value) of the flag, so i tried x *0x6c2070 and it showed the flag:
+flag: "UPX...? sounds like a delivery service :)"

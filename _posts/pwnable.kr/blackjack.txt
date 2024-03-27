@@ -1,0 +1,19 @@
+FUCKING EASY
+look at source code of betting function:
+int betting() //Asks user amount to bet
+{
+    printf("\n\nEnter Bet: $");
+    scanf("%d", &bet);
+
+    if (bet > cash) //If player tries to bet more money than player has
+    {
+        printf("\nYou cannot bet more money than you have.");
+        printf("\nEnter Bet: ");
+        scanf("%d", &bet);
+        return bet;
+    }
+    else return bet;
+} // End Function
+
+only verifies amount > money available in first one, i did 100000 in the first one and 101000000 in the second for a few times until i won
+flag: "YaY_I_AM_A_MILLIONARE_LOL"

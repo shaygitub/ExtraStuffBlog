@@ -1,0 +1,3 @@
+SUID is on, pass "cat password" to blukat
+cat password | ./blukat
+flag: "Pl3as_DonT_Miss_youR_GrouP_Perm!!"

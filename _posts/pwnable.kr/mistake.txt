@@ -1,0 +1,10 @@
+HELP ONLY WITH FIGURING OUT HOW ASSIGNEMENT STATEMENTS WORK INSIDE AN IF STATEMENTS
+1. look at source file, when trying to open a handle for the password file to get the password, this happens:
+</> is before =, so open(...) < 0 happens before fd = open(...). which means that:
+if (fd = (1 < 0)) -> if (fd = false/0), this assignes the file descriptor 0 (stdin) to fd
+so: when trying to read from password file it will try to take my input and put that into the original password buffer
+i saw that both passwords need to be 10 password, so i chose "mypassword" for the original password
+2. when reading i inputed my original password
+3. i calculated the char that will be when XORing the char from the original string with 1 (XOR is double sided) for each char
+calculated XOR string that i need to input: "lxq`rrvnse"
+flag: "Mommy, the operator priority always confuses me :("
